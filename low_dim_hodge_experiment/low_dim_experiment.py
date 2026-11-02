@@ -474,8 +474,6 @@ def plot_scatter(rows, out):
         ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlim(lo, hi); ax.set_ylim(lo, hi)
         ax.set_xlabel(lab); ax.grid(True, which="major")
         ax.text(0.04, 0.95, rf"Spearman $\rho={_spear(kl, x):.2f}$", transform=ax.transAxes, va="top", fontsize=15)
-        ax.text(0.96, 0.05, r"bound valid below $y=x$", transform=ax.transAxes, ha="right", fontsize=12,
-                color=COLORS["gray"])
     axes[0].set_ylabel(r"True $\mathrm{KL}(p^\star_{t_0}\,\|\,\hat p_{t_0})$")
     plt.tight_layout(rect=[0, 0, 0.9, 1])
     cax = fig.add_axes([0.915, 0.2, 0.015, 0.7])
