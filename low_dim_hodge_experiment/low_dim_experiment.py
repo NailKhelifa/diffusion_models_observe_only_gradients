@@ -478,7 +478,7 @@ def plot_scatter(rows, out):
     plt.tight_layout(rect=[0, 0, 0.9, 1])
     cax = fig.add_axes([0.915, 0.2, 0.015, 0.7])
     cb = fig.colorbar(plt.cm.ScalarMappable(cmap=CMAP_SHARE, norm=plt.Normalize(0, 1)), cax=cax)
-    cb.set_label("Solenoidal share", fontsize=16); cb.ax.tick_params(labelsize=14)
+    cb.set_label(rf"Solenoidal share of $L^2$-error", fontsize=16); cb.ax.tick_params(labelsize=14)
     savefig(fig, out, "KL_vs_bounds")
 
 
