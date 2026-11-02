@@ -20,15 +20,13 @@ Empirically, on Fashion-MNIST and CIFAR-10 the gradient component of the error d
 
 ## How the gradient component is estimated
 
-**The identity.** For each diffusion time $`s`$, the gradient component solves a variational problem over scalar potentials $`\varphi`$:
+For each diffusion time $`s`$, the gradient component solves a variational problem over scalar potentials $`\varphi`$:
 
 ```math
 \Vert \Pi_{𝒢_s}𝐞_s\Vert^2_{L^2(p^\star_s)} = \sup_{\varphi} 𝔼_{𝐱_s\sim p^\star_s}\big[2 \nabla\varphi\cdot𝐞_s - \Vert \nabla\varphi\Vert^2 \big].
 ```
 
-The supremum is reached at $`\nabla\varphi = \Pi_{𝒢_s}𝐞_s`$. Only gradient fields $`\nabla\varphi`$ enter, so the solenoidal part of $`𝐞_s`$ contributes nothing.
-
-**Replacing the unknown error with the denoising residual.** $`𝐞_s`$ involves the unknown score $`\nabla\log p^\star_s`$. Instead we use the denoising-score-matching residual
+The supremum is reached at $`\nabla\varphi = \Pi_{𝒢_s}𝐞_s`$. Only gradient fields $`\nabla\varphi`$ enter, so the solenoidal part of $`𝐞_s`$ contributes nothing. Since $`𝐞_s`$ involves the unknown score $`\nabla\log p^\star_s`$. Instead we use the denoising-score-matching residual
 
 ```math
 𝐫 = 𝐬_\theta(𝐱_s, s) - \nabla_{𝐱_s}\log p(𝐱_s\mid𝐱_0) = 𝐬_\theta(𝐱_s, s) + 𝛆/\sigma_s, \qquad 𝐱_s = \alpha_s𝐱_0 + \sigma_s𝛆 .
@@ -46,10 +44,6 @@ Because $`𝔼[𝐫\mid𝐱_s] = 𝐞_s(𝐱_s)`$ and $`\nabla\varphi`$ depends 
    - **total** $`\hat{ℰ}_{\mathrm{full}} = 𝔼\Vert 𝐫\Vert^2`$.
    - **solenoidal part** $`\max(\hat{ℰ}_{\mathrm{full}} - \hat{ℰ}_{\mathrm{grad}}, 0)`$, which is therefore an upper estimate.
 
-All expectations also average over diffusion time.
-
-**About the total.** $`𝔼[\Vert 𝐫\Vert^2]`$ equals the score error plus the constant $`𝔼[\Vert \nabla\log p(𝐱_s\mid𝐱_0) - \nabla\log p_s(𝐱_s)\Vert^2]`$, which does not depend on the model. Here $`𝐱_0`$ is drawn from the training images, so the reference distribution $`p_s`$ is the noised training set. For that distribution the constant is small: on Fashion-MNIST it is about 1.8, against a total of about 300 (both summed over pixels, same time distribution). The gradient estimate is not affected by this constant.
-
 **Settings used for the figures.**
 
 | | Fashion-MNIST (`diagnostic_fmnist.py`) | CIFAR-10 (`train_cifar10.py`) |
@@ -62,26 +56,12 @@ All expectations also average over diffusion time.
 | Critic training | 1,500 Adam steps, batch 256, a fresh draw of $`(𝐱_0, s, 𝛆)`$ at every step | 4,000 Adam steps, batch 128, cycling through the 50 fixed batches |
 | Learning rate | $`10^{-3}`$, cosine decay to $`10^{-5}`$; gradient clipping 1.0 | Same |
 | Reported $`\hat{ℰ}_{\mathrm{grad}}`$ | Mean of $`J`$ over the last 75 steps. Each value is computed on a new batch before the update on that batch | $`J`$ of the trained critic, evaluated on the same 50 fixed batches |
-| Reported $`\hat{ℰ}_{\mathrm{full}}`$ | $`𝔼\Vert 𝐫\Vert^2`$ **summed** over the 784 pixels, 50 × 128 fresh draws | $`𝔼\Vert 𝐫\Vert^2`$ **averaged** over the 3,072 pixel values, same 50 fixed batches |
+| Reported $`\hat{ℰ}_{\mathrm{full}}`$ | $`𝔼\Vert 𝐫\Vert^2`$ summed over the 784 pixels, 50 × 128 fresh draws | $`𝔼\Vert 𝐫\Vert^2`$ averaged over the 3,072 pixel values, same 50 fixed batches |
 | Critic restarts | 1 | 1 |
 
-The two datasets normalise the error differently (sum vs. average over pixels), so their y-axes cannot be compared directly.
+**Sample quality (FID)** is only used for the Fashion-MNIST correlations (Figure 2). It is computed in the 128-d feature space of a small CNN classifier trained at the start of `train_fmnist.py`, on 5,000 samples from a 200-step predictor–corrector sampler of the EMA model. 
 
-**From errors to the KL-bound curves.** Both curves are the time-averaged error multiplied by the same constant
-
-```math
-K = \tfrac12 (T-t_0)\overline{\sigma^2},
-```
-
-where $`\overline{\sigma^2}`$ is the mean of $`\sigma_s^2`$ over diffusion time:
-- Fashion-MNIST: over the log-uniform time distribution. The published figures used a 200-draw Monte Carlo estimate, $`K = 0.8632`$; the exact value is $`0.8644`$. The script fixes $`K = 0.8632`$ so that it reproduces the figures exactly.
-- CIFAR-10: over a 256-point uniform grid.
-
-"Girsanov bound" $`= K\hat{ℰ}_{\mathrm{full}}`$ and "Ours" $`= K\hat{ℰ}_{\mathrm{grad}}`$. The ratio between the curves, and therefore the gap, does not depend on $`K`$. Read the absolute values as a rescaled estimate, not as exact evaluations of the integrals.
-
-**Sample quality (FID)** is only used for the Fashion-MNIST correlations (Figure 2). It is computed in the 128-d feature space of a small CNN classifier trained at the start of `train_fmnist.py`, on 5,000 samples from a 200-step predictor–corrector sampler of the EMA model. The CIFAR-10 figure does not use FID, and `train_cifar10.py` does not compute it.
-
-## Repository layout
+## Repository structure
 
 ```
 injection_test_2d/   2D demo: invisible vs observable errors of equal L2 energy (Figure 1)
@@ -94,9 +74,9 @@ Published figures are in each folder's `figures/` (`Fig1.*` for the 2D demo). Th
 
 ### `injection_test_2d/`
 
-| File | What it does |
+| File | Role |
 |---|---|
-| `injection_testv3.py` | Builds a two-moons Gaussian mixture (64 components) whose noised densities and scores are known exactly under a VP-SDE. It then runs reverse Euler–Maruyama sampling three ways: (a) true score; (b) true score + an exactly weighted-divergence-free error $`𝐞_{\text{inv}}`$, which satisfies $`p^\star_s𝐞_{\text{inv}} = J\nabla\phi_s`$ with $`J`$ the 90° rotation; (c) true score + a pure-gradient error rescaled to the **same** time-integrated $`L^2(p^\star)`$ energy as (b). NumPy only, about a minute on a CPU. |
+| `injection_testv3.py` | Builds a two-moons Gaussian mixture (64 components) whose noised densities and scores are known exactly under a VP-SDE. It then runs reverse Euler–Maruyama sampling three ways: (a) true score; (b) true score + an exactly weighted-divergence-free error; (c) true score + a pure-gradient error rescaled to the same time-integrated $`L^2(p^\star)`$ energy as (b). |
 
 The paper's Figure 1 uses a mixture of 8 Gaussians arranged on a ring. Reproducing it only requires changing the target distribution in the script (the component means `MUS`). The two-moons target used here (`Fig1.*`) illustrates the same result on a dataset whose shape is not Gaussian.
 
@@ -104,59 +84,40 @@ The paper's Figure 1 uses a mixture of 8 Gaussians arranged on a ring. Reproduci
 
 VP-SDE with $`\alpha(t)=e^{-t/2}`$, $`\sigma(t)=\sqrt{1-e^{-t}}`$, $`T=4`$, $`t_0=0.05`$. The score network is a U-Net with self-attention that outputs the score directly.
 
-| File | What it does |
+| File | Role |
 |---|---|
-| `train_fmnist.py` | **Training.** Three model sizes: `tiny` (width 32, 1 res-block), `small` (48, 2), `full` (64, 2). Each is trained with seeds 0, 1, 2 for 400 epochs (σ²-weighted DSM loss, AdamW lr 5e-4, batch 512, EMA 0.9999). Every 20 epochs it computes FID and saves `results/<size>_s<seed>/ckpt_ep*.pt`. |
+| `train_fmnist.py` | **Training.** Three model sizes: `tiny` (width 32, 1 res-block), `small` (48, 2), `full` (64, 2). Each is trained with three seeds for 400 epochs. Checkpoints are saved every 20 epochs to computes the FID. |
 | `diagnostic_fmnist.py` | **Diagnostic.** Runs the procedure above on every checkpoint and caches the results in `diagnostic_cache/`. Draws `error_decomposition_<size>_score_dsm` and `kl_bounds_<size>_score_dsm`, and writes the Spearman table. With `--plots-only` it redraws from the cache alone. |
-| `plot_spearman.py` | Spearman ρ(FID, ·), mean ± std over seeds, from the cached table → `spearman_bars_score_dsm_v2` (Figure 2). |
+| `plot_spearman.py` | Spearman ρ(FID, ·), mean ± std over seeds. |
 | `diagnostic_cache/` | Logged diagnostic results behind every Fashion-MNIST figure. |
 
 ### `cifar10/`
 
 VP-SDE with linear $`\beta`$ from 0.1 to 20, $`T=1`$, $`t_0=10^{-3}`$. The U-Net (width 96, 2 res-blocks per level, 14.7M parameters) predicts the noise $`𝛆`$.
 
-| File | What it does |
+| File | Role |
 |---|---|
-| `train_cifar10.py` | **Training + diagnostic.** Trains seeds 45, 47, 49, 52 for 350 epochs. Settings: DSM loss with Min-SNR-5 weighting, AdamW lr 2e-4 (3,000 warm-up steps, cosine decay to 1e-5), batch 128, EMA 0.9999, dropout 0.1. Every 10 epochs it runs the diagnostic and logs the results to `runs/ch96/seed<s>/hist.json`. |
+| `train_cifar10.py` | **Training + diagnostic.** Trains four seeds for 350 epochs via DSM loss + Min-SNR-5 weighting. Every 10 epochs it runs the diagnostic and logs the results to `runs/ch96/seed<s>/hist.json`. |
 | `plot_cifar10.py` | Reads the `hist.json` files and plots median + IQR over seeds of the error split and the two bound curves → `combined_metrics` (**Figure 3**). |
-| `logs_v24/ch96/seed{45,47,49,52}/hist.json` | Logged histories of the four runs behind Figure 3. They also contain the FID of each evaluation (`fid_dsm`) from the original runs. |
+
 
 ### `low_dim_hodge_experiment/`
 
-A low-dimensional check in which everything is known exactly: the Hodge decomposition of the score error, both bounds, and the true KL of the generated distribution. No network is trained and no critic is needed.
+A low-dimensional close-form check for the Hodge decomposition of the score error, both bounds, and the true KL of the generated distribution. No network is trained and no critic is needed.
 
 **Setup.**
-- **Target:** a mixture of 8 anisotropic Gaussians with unequal weights, on a ring of radius 2 in $`ℝ^2`$. Its noised marginals $`p^\star_s`$ and scores are available in closed form.
-- **Forward process:** VP-SDE with linear $`\beta`$ from 0.1 to 20, $`T=1`$. $`t_0`$ is chosen so that the noise standard deviation at $`t_0`$ is 0.05.
-- **Score errors with a known decomposition:** $`𝐞_s = a \nabla\psi_s + b J\nabla\log p^\star_s`$.
-  - $`\psi_s = \log\tilde p_s - \log p^\star_s`$, where $`\tilde p`$ is a mixture with perturbed weights and means.
-  - $`J`$ is the 90° rotation. Since $`\nabla\cdot(p^\star_s J\nabla\log p^\star_s) = \nabla\cdot(J\nabla p^\star_s) = 0`$, this part is exactly solenoidal.
-  - Hence $`\Pi_{𝒢_s}𝐞_s = a\nabla\psi_s`$ and $`\Pi_{𝒢_s^\perp}𝐞_s = bJ\nabla\log p^\star_s`$.
-- **Both bounds are exact time integrals,** computed by Gauss–Legendre quadrature with $`g^2 = \beta(s)`$:
-  - Girsanov: $`\tfrac12\int_{t_0}^T \beta(s)\big(a^2\Vert \nabla\psi_s\Vert^2_{L^2(p^\star_s)} + b^2𝔼_{p^\star_s}\Vert \nabla\log p^\star_s\Vert^2\big)\mathrm{d}s`$;
-  - ours: $`\tfrac12\int_{t_0}^T \beta(s) a^2\Vert \nabla\psi_s\Vert^2_{L^2(p^\star_s)}\mathrm{d}s`$.
-- **True KL:** the generated law $`\hat p_{t_0}`$ is computed by solving the reverse Fokker–Planck equation with the perturbed score. The solver uses Scharfetter–Gummel finite volumes and variable-step BDF2, with 200 time steps on a $`224^2`$ grid over $`[-4.5, 4.5]^2`$.
-  - $`\mathrm{KL}(p^\star_{t_0}\Vert \hat p_{t_0})`$, TV and $`W_2`$ are measured against a reference solve with the exact score, on the same grid and time steps.
-  - A second solve on a $`149^2`$ grid gives a discretisation error bar for each KL.
-- **Ensemble:** 48 error fields using 4 perturbed mixtures. The amplitudes are log-uniform: $`a \in [0.03, 1]`$, $`b \in [0.03, 1.5]`$.
-  - It includes 6 purely solenoidal fields ($`a=0`$) and 7 purely gradient fields ($`b=0`$).
-  - One gradient field has $`a=1, b=0`$. Its endpoint is known in closed form ($`\hat p_{t_0} = \tilde p_{t_0}`$), which checks the solver.
+- **Target:** a mixture of 8 anisotropic Gaussians with unequal weights, on a ring of radius 2 in $`ℝ^2`$.
+- **Forward process:** VP-SDE with linear $`\beta`$ from 0.1 to 20, $`T=1`$. 
+- **Score errors with a known decomposition:** We define $`𝐞_s = a \nabla\psi_s + b J\nabla\log p^\star_s`$, where $`\psi_s = \log\tilde p_s - \log p^\star_s`$, where $`\tilde p`$ is the gradient part, built as a mixture with perturbed weights and means and $`J`$ is the 90° rotation, exactly solenoidal (proof of Theorem 3.1.). Hence $`\Pi_{𝒢_s}𝐞_s = a\nabla\psi_s`$ and $`\Pi_{𝒢_s^\perp}𝐞_s = bJ\nabla\log p^\star_s`$.
+- **Computing bounds:** both bounds are exact time integral computed by discretizing time on a grid (Gauss-Legendre quadrature). 
+- **True KL:** the generated law $`\hat p_{t_0}`$ is computed by solving the reverse Fokker–Planck equation with the perturbed score. $`\mathrm{KL}(p^\star_{t_0}\Vert \hat p_{t_0})`$, TV and $`W_2`$ are measured against a reference solve with the exact score, on the same grid and time steps.
 
-**Results** (`lowdim_results/results.json`):
-- Spearman correlation between the true KL and each bound: 0.15 for Girsanov vs **0.99** for ours. With TV: 0.15 vs 1.00; with $`W_2`$: 0.09 vs 0.95.
-- Median KL / bound: 0.023 for Girsanov vs 0.96 for ours. Our bound is nearly tight here.
-- KL lies below the Girsanov bound for all 48 fields. It lies below our bound for 42 of 48. The other 6 exceed it by less than their discretisation error bar.
-- Purely solenoidal errors: the KL stays below $`5 \times 10^{-5}`$, close to the solver floor of $`2 \times 10^{-5}`$, while the Girsanov bound reaches 14.7.
-- Closed-form check: for $`a=1, b=0`$ the solver gives $`\mathrm{KL} = 0.4407`$, against $`\mathrm{KL}(p^\star_{t_0}\Vert \tilde p_{t_0}) = 0.4427`$ (our bound: 0.4427).
+**Results** (`lowdim_results/results.json`): Spearman correlation between the true KL and each bound: 0.15 for Girsanov vs **0.99** for ours. With TV: 0.15 vs 1.00; with $`W_2`$: 0.09 vs 0.95.
 
-| File | What it does |
+| File | Role |
 |---|---|
 | `low_dim_experiment.py` | Runs the whole experiment on CPU and writes `KL_vs_bounds.{pdf,png}` (true KL against each bound, coloured by the solenoidal share of $`\Vert 𝐞\Vert^2`$) and `results.json`. `--quick` runs a smaller configuration in about 30 s; `--replot` redraws the figure from `results.json`. |
-| `lowdim_results/` | The figure and `results.json` (every field's amplitudes, bounds, KL, TV, $`W_2`$ and error bar, plus the summary above). |
-
-Needs only `numpy`, `scipy` and `matplotlib`. Optional extras:
-- `pot`: computes $`W_2`$ by exact discrete optimal transport; without it, the script falls back to sliced $`W_2`$.
-- A LaTeX installation with `dvipng`: used for the figure's text; otherwise matplotlib's Computer Modern fonts are used.
+| `lowdim_results/` | The figure and metric logs in `results.json`. |
 
 ## Reproducing the figures
 
@@ -197,13 +158,6 @@ python low_dim_experiment.py --quick                           # smaller configu
 Pass `--out_dir` for a full rerun: the default output folder is `lowdim_results/`, which would overwrite the shipped results.
 
 Use a new `--cache-dir` for the Fashion-MNIST diagnostic. The script skips any checkpoint already present in the cache, so the shipped `diagnostic_cache/` would make it reuse the logged results.
-
-### What "reproduce" means here
-
-- **From the included logs:** checked against the files shipped here. Figure 1 (two-moons version), Figure 3 and all six Fashion-MNIST error-split and KL-bound plots come out pixel-identical. The Spearman chart has the same content, with an image size that differs by a few pixels. The low-dimensional figure redrawn with `--replot` is pixel-identical.
-- **Retraining:** results match within the seed-to-seed spread shown by the bands, not bit for bit.
-  - Mixed precision and non-deterministic GPU kernels are used (CIFAR-10 training, both diagnostics).
-  - The original runs also trained a second, exploratory model in the same process, which consumed random numbers; these scripts train only the model analysed in the paper.
 
 ## Citation
 
