@@ -463,8 +463,8 @@ def plot_scatter(rows, out):
     allv = np.concatenate([kl[kl > 0], [r["bound_girsanov"] for r in rows],
                            [r["bound_ours"] for r in rows if r["bound_ours"] > 0]])
     lo, hi = 10 ** np.floor(np.log10(allv.min())), 10 ** np.ceil(np.log10(allv.max()))
-    for ax, key, lab in [(axes[0], "bound_girsanov", r"Girsanov bound $\frac{1}{2}\int g^2\|e_s\|^2$"),
-                         (axes[1], "bound_ours", r"Our bound $\frac{1}{2}\int g^2\|\Pi_{\mathcal{G}}e_s\|^2$")]:
+    for ax, key, lab in [(axes[0], "bound_girsanov", r"Girsanov bound $\frac{1}{2}\int \sigma_s^2\|e_s\|^2$"),
+                         (axes[1], "bound_ours", r"Our bound $\frac{1}{2}\int \sigma_s^2\|\Pi_{\mathcal{G}}e_s\|^2$")]:
         x = np.array([r[key] for r in rows]); ok = (x > 0) & (kl > 0)
         ax.errorbar(x[ok], kl[ok], yerr=[np.minimum(err[ok], 0.95 * kl[ok]), err[ok]], fmt="none",
                     ecolor=COLORS["gray"], elinewidth=1.0, capsize=0, zorder=2)
